@@ -1,0 +1,76 @@
+#!/bin/sh
+
+# based on https://github.com/asb/raspi-config/blob/master/raspi-config
+
+do_expand_rootfs() {
+ln -s mmcblk0p2 /dev/root
+    if ! [ -h /dev/root ]; then
+	echo "/dev/root does not exist or is not a symlink. Don't know how to expand"
+        return 0
+    fi
+
+    ROOT_PART=$(readlink /dev/root)
+    PART_NUM=${ROOT_PART#mmcblk0p}
+    if [ "$PART_NUM" = "$ROOT_PART" ]; then
+        echo "/dev/root is not an SD card. Don't know how to expand"
+	return 0
+    fi
+
+    if [ "$PART_NUM" -ne 2 ]; then
+        echo "Your partition layout is not currently supported by this tool."
+	return 0
+    fi
+
+    LAST_PART_NUM=$(parted /dev/mmcblk0 -ms unit s p | tail -n 1 | cut -f 1 -d:)
+
+    if [ "$LAST_PART_NUM" != "$PART_NUM" ]; then
+	echo "/dev/root is not the last partition. Don't know how to expand"
+        return 0
+    fi
+
+    # Get the starting offset of the root partition
+    PART_START=$(parted /dev/mmcblk0 -ms unit s p | grep "^${PART_NUM}" | cut -f 2 -d:)
+
+    PART_START=${PART_START%?}
+
+    [ "$PART_START" ] || return 1
+    # Return value will likely be error for fdisk as it fails to reload the
+    # partition table because the root fs is mounted
+    fdisk -u /dev/mmcblk0 <<EOF
+p
+d
+$PART_NUM
+n
+p
+$PART_NUM
+$PART_START
+
+p
+w
+EOF
+
+    cat <<\EOF > /etc/init.d/S00resize2fs_once &&
+#!/bin/sh
+
+case "$1" in
+  start)
+    echo "Starting resize2fs_once"
+    ln -s mmcblk0p2 /dev/root
+    resize2fs /dev/root
+    rm -f /etc/init.d/S00resize2fs_once
+    echo "Root filesystem expanded."
+    ;;
+esac
+EOF
+
+    chmod +x /etc/init.d/S00resize2fs_once
+    rm /etc/init.d/S00expand_rootfs
+    echo "Root partition expanded."
+    reboot
+}
+
+case "$1" in
+  start)
+      do_expand_rootfs
+      ;;
+esac

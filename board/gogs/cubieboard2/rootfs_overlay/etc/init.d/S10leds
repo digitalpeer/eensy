@@ -1,0 +1,22 @@
+#!/bin/sh
+
+case "$1" in
+    start)
+	echo mmc0 >/sys/devices/platform/leds/leds/cubieboard2:blue:usr/trigger
+	echo heartbeat > /sys/devices/platform/leds/leds/cubieboard2:green:usr/trigger
+	;;
+    stop)
+	echo none >/sys/devices/platform/leds/leds/cubieboard2:blue:usr/trigger
+	echo none > /sys/devices/platform/leds/leds/cubieboard2:green:usr/trigger
+	;;
+  restart|reload)
+	"$0" stop
+	sleep 1
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

@@ -1,0 +1,7 @@
+menuconfig BR2_PACKAGE_GOGS
+	bool "gogs"
+	depends on BR2_arm
+	help
+	  Gogs - Go Git Server binary package.
+
+	  http://gogs.io/

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+case "$1" in
+  start)
+ 	echo "Starting iptables..."
+	iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 3000
+	iptables -t nat -I OUTPUT -p tcp -d 127.0.0.1 --dport 80 -j REDIRECT --to-ports 3000
+	;;
+  stop)
+	printf "Stopping iptables..."
+	iptables -t nat -F
+	iptables --t nat -X
+	;;
+  restart|reload)
+	"$0" stop
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

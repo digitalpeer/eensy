@@ -1,0 +1,30 @@
+#!/bin/sh
+
+NAME=gogs
+DAEMON=/opt/gogs/gogs
+DAEMON_OPTS="web"
+
+case "$1" in
+    start)
+	printf "Starting $NAME: "
+	sleep 5 # hack, wait for USB devices
+	GOGS_CUSTOM=/home/git/gogs-data USER=git USERNAME=git \
+		   start-stop-daemon -S -q -b -k 077 --chdir /home/git --chuid git:git -x $DAEMON -- $DAEMON_OPTS
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	;;
+    stop)
+	printf "Stopping $NAME: "
+	start-stop-daemon -K -q -n $NAME
+	[ $? = 0 ] && echo "OK" || echo "FAIL"
+	;;
+  restart|reload)
+	"$0" stop
+	sleep 1
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

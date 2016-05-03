@@ -1,0 +1,55 @@
+#!/bin/sh
+
+MYSQL_SETUP_LOCK=/home/git/.mysql_setup
+
+case "$1" in
+    start)
+
+	if [ ! -f $MYSQL_SETUP_LOCK ]; then
+
+	    printf "Auto configuring mysql server at first boot..."
+
+	    SECURE_MYSQL=$(expect -c "
+
+set timeout 10
+spawn mysql_secure_installation
+
+expect \"Enter current password for root (enter for none):\"
+send \"$MYSQL\r\"
+
+expect \"Change the root password?\"
+send \"n\r\"
+
+expect \"Remove anonymous users?\"
+send \"y\r\"
+
+expect \"Disallow root login remotely?\"
+send \"y\r\"
+
+expect \"Remove test database and access to it?\"
+send \"y\r\"
+
+expect \"Reload privilege tables now?\"
+send \"y\r\"
+
+expect eof
+")
+
+	    mysql -u root -e 'CREATE DATABASE IF NOT EXISTS gogs;'
+
+	    echo "$SECURE_MYSQL" > $MYSQL_SETUP_LOCK
+	fi
+	;;
+    stop)
+	;;
+  restart|reload)
+	"$0" stop
+	sleep 1
+	"$0" start
+	;;
+  *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
