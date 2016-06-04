@@ -1,0 +1,32 @@
+#!/bin/sh
+
+gogs_config()
+{
+    GOGS_CONFIG_FILE=/home/git/gogs-data/conf/app.ini
+    DEFAULT_DATA_PATH=/home/git/gogs-data
+    DEFAULT_USB_MOUNTPOINT=/media/usb0
+
+    # if gogs install has not been complete
+    if ! grep -q "RUN_MODE" $GOGS_CONFIG_FILE; then
+	# find first inserted USB drive
+	if mountpoint -q $DEFAULT_USB_MOUNTPOINT; then
+	    echo "Configuring Gogs to use USB drive at $DEFAULT_USB_MOUNTPOINT ..."
+	    sed -i "s,$DEFAULT_DATA_PATH,$DEFAULT_USB_MOUNTPOINT/gogs-data,g" $GOGS_CONFIG_FILE
+	    mkdir -p $DEFAULT_USB_MOUNTPOINT/gogs-data
+	    chown git.git $DEFAULT_USB_MOUNTPOINT/gogs-data
+	    chmod ug+rwx $DEFAULT_USB_MOUNTPOINT/gogs-data
+	    sync
+	fi
+    fi
+}
+
+case "$1" in
+    start)
+	gogs_config
+        ;;
+    *)
+	echo "Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
