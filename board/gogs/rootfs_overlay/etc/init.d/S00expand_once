@@ -2,8 +2,22 @@
 
 # based on https://github.com/asb/raspi-config/blob/master/raspi-config
 
-do_expand_rootfs() {
-ln -s mmcblk0p2 /dev/root
+#
+# Here's how this works:
+#  - This script runs fdisk and resizes the root partition to the size of the
+#    card.
+#  - It writes out a new script called S00resize_once, deletes itself, and
+#    reboots.
+#  - When the devices comes back up, it runs the new S00resize_once which
+#    resizes the filesystem online and then it deletes itself and continues
+#    a normal boot.
+#
+
+do_expand_rootfs()
+{
+    # sometimes this link does not exist
+    ln -s mmcblk0p2 /dev/root
+
     if ! [ -h /dev/root ]; then
 	echo "/dev/root does not exist or is not a symlink. Don't know how to expand"
         return 0
@@ -49,7 +63,7 @@ p
 w
 EOF
 
-    cat <<\EOF > /etc/init.d/S00resize2fs_once &&
+    cat <<\EOF > /etc/init.d/S00resize_once &&
 #!/bin/sh
 
 case "$1" in
@@ -57,16 +71,20 @@ case "$1" in
     echo "Starting resize2fs_once"
     ln -s mmcblk0p2 /dev/root
     resize2fs /dev/root
-    rm -f /etc/init.d/S00resize2fs_once
+    rm -f /etc/init.d/S00resize_once
+    sync
     echo "Root filesystem expanded."
     ;;
 esac
 EOF
 
-    chmod +x /etc/init.d/S00resize2fs_once
-    rm /etc/init.d/S00expand_rootfs
-    echo "Root partition expanded."
-    reboot
+    chmod +x /etc/init.d/S00resize_once
+    rm /etc/init.d/S00expand_once
+    echo "Root partition expanded. Rebooting ..."
+    reboot -f
+    while true; do
+	sleep 1
+    done
 }
 
 case "$1" in
