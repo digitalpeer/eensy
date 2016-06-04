@@ -3,7 +3,7 @@
 set -e
 
 EENSY_PATH=../eensy
-VERSION=1.0-rc1
+VERSION=1.0-rc2
 
 for c in $EENSY_PATH/configs/*_defconfig
 do
